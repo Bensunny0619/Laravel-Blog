@@ -11,7 +11,7 @@
 
             {{-- 🔍 Search Bar --}}
             <form method="GET" action="{{ route('posts.index') }}" class="flex gap-2">
-                <input type="text" name="search" value="{{ request('search') }}"
+                <input type="text" id="search-input" name="search" value="{{ request('search') }}"
                        placeholder="Search posts..."
                        class="border border-gray-300 rounded px-3 py-1 focus:ring focus:ring-blue-200">
                 <button type="submit"
@@ -22,6 +22,7 @@
         </div>
     </x-slot>
 
+    {{-- Main layout with 3 columns --}}
     <div class="max-w-7xl mx-auto mt-6 grid grid-cols-1 md:grid-cols-4 gap-6">
 
         {{-- LEFT SIDEBAR --}}
@@ -66,47 +67,85 @@
 
         {{-- MAIN CONTENT --}}
         <div class="md:col-span-2 bg-white p-6 rounded shadow">
-            @foreach($posts as $post)
-                <div class="border-b border-gray-200 pb-4 mb-4">
-                    <h3 class="text-lg font-bold">
-                        <a href="{{ route('posts.show', $post) }}" class="text-blue-600 hover:underline">
-                            {{ $post->title }}
-                        </a>
-                    </h3>
+            <div id="post-list">
+                @if($posts->count() > 0)
+                    @foreach($posts as $post)
+                        <div class="border-b border-gray-200 pb-4 mb-4">
+                            <h3 class="text-lg font-bold">
+                                <a href="{{ route('posts.show', $post) }}" class="text-blue-600 hover:underline">
+                                    {{ $post->title }}
+                                </a>
+                            </h3>
 
-                    <div class="flex items-center gap-2 text-sm text-gray-600">
-                        @if ($post->user && $post->user->profile_photo)
-                            <img src="{{ $post->user->profile_photo }}" alt="Profile" class="w-6 h-6 rounded-full">
-                        @endif
-                        <span>By {{ $post->user->name ?? 'Unknown' }}</span>
-                    </div>
-
-                    @if ($post->image)
-                        @if(Str::startsWith($post->image, ['http://', 'https://']))
-                            <img src="{{ $post->image }}" alt="{{ $post->title }}" class="rounded-md my-2 w-full max-w-md mx-auto shadow">
-                        @else
-                            <img src="{{ asset('storage/' . $post->image) }}" alt="{{ $post->title }}" class="rounded-md my-2 w-full max-w-md mx-auto shadow">
-                        @endif
-                    @endif
-
-                    <p class="mt-2 text-gray-800">{{ Str::limit($post->body, 150) }}</p>
-
-                    @auth
-                        @if($post->user_id === auth()->id())
-                            <div class="mt-2">
-                                <a href="{{ route('posts.edit', $post) }}" class="text-yellow-600 hover:underline">Edit</a>
-                                <form action="{{ route('posts.destroy', $post) }}" method="POST" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-red-600 hover:underline">Delete</button>
-                                </form>
+                            <div class="flex items-center gap-2 text-sm text-gray-600">
+                                @if ($post->user && $post->user->profile_photo)
+                                    <img src="{{ $post->user->profile_photo }}" alt="Profile" class="w-6 h-6 rounded-full">
+                                @endif
+                                <span>By {{ $post->user->name ?? 'Unknown' }}</span>
                             </div>
-                        @endif
-                    @endauth
-                </div>
-            @endforeach
 
-            {{ $posts->links() }}
+                            @if ($post->image)
+                                @if(Str::startsWith($post->image, ['http://', 'https://']))
+                                    <img src="{{ $post->image }}" alt="{{ $post->title }}" class="rounded-md my-2 w-full max-w-md mx-auto shadow">
+                                @else
+                                    <img src="{{ asset('storage/' . $post->image) }}" alt="{{ $post->title }}" class="rounded-md my-2 w-full max-w-md mx-auto shadow">
+                                @endif
+                            @endif
+
+                            <p class="mt-2 text-gray-800">{{ Str::limit($post->body, 150) }}</p>
+
+                            @auth
+                                @if($post->user_id === auth()->id())
+                                    <div class="mt-2">
+                                        <a href="{{ route('posts.edit', $post) }}" class="text-yellow-600 hover:underline">Edit</a>
+                                        <form action="{{ route('posts.destroy', $post) }}" method="POST" class="inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-red-600 hover:underline">Delete</button>
+                                        </form>
+                                    </div>
+                                @endif
+                            @endauth
+
+                            <div class="mt-3 flex items-center gap-4">
+                                {{-- Like Button --}}
+                                @auth
+                                    <form action="{{ route('posts.like', $post) }}" method="POST" class="like-form" data-post-id="{{ $post->id }}">
+                                        @csrf
+                                        <button type="submit" class="flex items-center space-x-2">
+                                            @if ($post->likes->where('user_id', auth()->id())->count())
+                                                ❤️ <span>Unlike</span>
+                                            @else
+                                                🤍 <span>Like</span>
+                                            @endif
+                                        </button>
+                                    </form>
+                                    <span class="text-gray-600 like-count-{{ $post->id }}">
+                                        {{ $post->likes->count() }} {{ Str::plural('like', $post->likes->count()) }}
+                                    </span>
+                                @else
+                                    <a href="{{ route('login') }}" class="text-blue-600 hover:underline">Log in to like</a>
+                                @endauth
+
+                                {{-- Comment Button --}}
+                                <a href="{{ route('posts.show', $post) }}#comments" class="flex items-center space-x-2 text-blue-600 hover:underline">
+                                    💬 <span>Comment</span>
+                                </a>
+                                <span class="text-gray-600">
+                                    {{ $post->comments->count() }} {{ Str::plural('comment', $post->comments->count()) }}
+                                </span>
+                            </div>
+                        </div>
+                    @endforeach
+
+                    {{ $posts->links() }}
+                @else
+                    <div class="text-center text-gray-600 py-10">
+                        <p class="text-lg font-semibold">No posts found.</p>
+                        <p class="text-sm">Try a different search term or clear the filter.</p>
+                    </div>
+                @endif
+            </div>
         </div>
 
         {{-- RIGHT SIDEBAR --}}
@@ -150,23 +189,36 @@
         </div>
     </div>
 
+    {{-- 🔄 Dynamic Search --}}
     <script>
-    document.querySelectorAll('.like-form').forEach(form => {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const postId = form.getAttribute('data-post-id');
-            fetch(form.action, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': form.querySelector('[name="_token"]').value,
-                    'Accept': 'application/json'
+    document.addEventListener("DOMContentLoaded", () => {
+        const searchInput = document.getElementById("search-input");
+        const postList = document.getElementById("post-list");
+        let typingTimer;
+        const delay = 400;
+
+        searchInput.addEventListener("input", function() {
+            clearTimeout(typingTimer);
+            const query = this.value.trim();
+
+            typingTimer = setTimeout(() => {
+                if (query === "") {
+                    // Reset search without refreshing page
+                    fetch(`{{ route('posts.search') }}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            postList.innerHTML = data.html || `<p class='text-center text-gray-600 py-10'>No posts found.</p>`;
+                        });
+                    return;
                 }
-            })
-            .then(res => res.json())
-            .then(data => {
-                document.querySelector('.like-count-' + postId).textContent = data.likes + ' ' + (data.likes === 1 ? 'like' : 'likes');
-                form.querySelector('button').innerHTML = data.liked ? '❤️ <span>Unlike</span>' : '🤍 <span>Like</span>';
-            });
+
+                fetch(`{{ route('posts.search') }}?search=${encodeURIComponent(query)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        postList.innerHTML = data.html || `<p class='text-center text-gray-600 py-10'>No posts found.</p>`;
+                    })
+                    .catch(err => console.error("Search error:", err));
+            }, delay);
         });
     });
     </script>

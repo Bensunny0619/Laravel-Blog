@@ -3,7 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Models\User;
+use App\Models\Comment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
 {
@@ -11,61 +15,67 @@ class PostController extends Controller
     {
         $query = Post::query();
 
-        // 🔍 Search functionality
         if ($search = $request->input('search')) {
-            $query->where('title', 'like', "%{$search}%")
-                  ->orWhere('body', 'like', "%{$search}%");
+            $query->where(fn($q) => 
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('body', 'like', "%{$search}%")
+            );
         }
 
-        // 🏷️ Filter by category (optional)
         if ($category = $request->input('category')) {
-    $query->where(function ($q) use ($category) {
-        $q->where('title', 'like', "%{$category}%")
-          ->orWhere('body', 'like', "%{$category}%");
-    });
-}
+            $query->where(fn($q) => 
+                $q->where('title', 'like', "%{$category}%")
+                  ->orWhere('body', 'like', "%{$category}%")
+            );
+        }
 
+        $posts = $query->with(['user', 'likes', 'comments'])->latest()->paginate(20);
 
-        $posts = $query->latest()->paginate(20);
-
-        // ⭐ Popular posts
         $popularPosts = Post::withCount('likes')
             ->orderBy('likes_count', 'desc')
             ->take(5)
             ->get();
 
-        // 💬 Recent comments
-        $recentComments = \App\Models\Comment::latest()
+        $recentComments = Comment::with('post', 'user')
+            ->latest()
             ->take(5)
-            ->with('post', 'user')
             ->get();
 
-        // 🏷️ Categories (based on topics used in factory)
-        $categories = [
-            'Technology', 'Travel', 'Health', 'Food', 'Lifestyle',
-            'Education', 'Science', 'Business', 'Art', 'Sports'
-        ];
+        $categories = ['Technology', 'Travel', 'Health', 'Food', 'Lifestyle', 'Education', 'Science', 'Business', 'Art', 'Sports'];
 
-        // 🧑‍💻 Top Authors (based on number of posts)
-        $topAuthors = \App\Models\User::withCount('posts')
+        $topAuthors = User::withCount('posts')
             ->orderBy('posts_count', 'desc')
             ->take(5)
             ->get();
 
-        // 📅 Archive (month/year)
         $archives = Post::selectRaw('YEAR(created_at) year, MONTH(created_at) month, COUNT(*) post_count')
             ->groupBy('year', 'month')
             ->orderByRaw('MIN(created_at) desc')
             ->get();
 
-        return view('posts.index', compact(
-            'posts',
-            'popularPosts',
-            'recentComments',
-            'categories',
-            'topAuthors',
-            'archives'
-        ));
+        return view('posts.index', compact('posts', 'popularPosts', 'recentComments', 'categories', 'topAuthors', 'archives'));
+    }
+
+    public function search(Request $request)
+    {
+        $query = $request->get('search', '');
+
+        $posts = Post::with(['user', 'likes', 'comments'])
+            ->when($query, fn($q) =>
+                $q->where('title', 'like', "%{$query}%")
+                  ->orWhere('body', 'like', "%{$query}%")
+            )
+            ->latest()
+            ->get();
+
+        $html = view('posts._list', compact('posts'))->render();
+
+        return response()->json(['html' => $html]);
+    }
+    
+    public function show(Post $post)
+    {
+        return view('posts.show', compact('post'));
     }
 
     public function create()
@@ -75,49 +85,28 @@ class PostController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'title' => 'required|max:255',
-            'body'  => 'required',
-            'image' => 'nullable|image|max:2048',
+        // 1️⃣ Validate input
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'body' => 'required|string',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        $data['user_id'] = auth()->id();
-
+        // 2️⃣ Handle file upload
+        $imagePath = null;
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('images', 'public');
-            $data['image'] = $path;
+            $imagePath = $request->file('image')->store('post_images', 'public');
         }
 
-        Post::create($data);
-
-        return redirect()->route('posts.index')->with('success', 'Post created.');
-    }
-
-    public function show(Post $post)
-    {
-        return view('posts.show', compact('post'));
-    }
-
-    public function edit(Post $post)
-    {
-        return view('posts.edit', compact('post'));
-    }
-
-    public function update(Request $request, Post $post)
-    {
-        $data = $request->validate([
-            'title' => 'required|max:255',
-            'body'  => 'required',
+        // 3️⃣ Create the post
+        Post::create([
+            'title' => $validated['title'],
+            'body' => $validated['body'],
+            'image' => $imagePath,
+            'user_id' => Auth::id(),
         ]);
 
-        $post->update($data);
-
-        return redirect()->route('posts.index')->with('success', 'Post updated.');
-    }
-
-    public function destroy(Post $post)
-    {
-        $post->delete();
-        return redirect()->route('posts.index')->with('success', 'Post deleted.');
+        // 4️⃣ Redirect back with success message
+        return redirect()->route('posts.index')->with('success', 'Post created successfully!');
     }
 }

@@ -14,7 +14,34 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
+    <script>
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll('.like-form').forEach(form => {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const postId = form.dataset.postId;
+            const res = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            });
+            const data = await res.json();
+            const countEl = document.querySelector(`.like-count-${postId}`);
+            if (countEl) {
+                countEl.textContent = `${data.likes_count} like${data.likes_count === 1 ? '' : 's'}`;
+            }
+            form.querySelector('button').innerHTML = data.liked
+                ? '❤️ <span>Unlike</span>'
+                : '🤍 <span>Like</span>';
+        });
+    });
+});
+</script>
+
     <body class="bg-gray-100">
+        @include('layouts.navigation')
         <div class="min-h-screen py-6">
             {{ $slot }}
         </div>

@@ -1,67 +1,39 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            ✍️ Create New Post
+            {{ __('Create New Post') }}
         </h2>
     </x-slot>
 
-    <div class="py-8">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+    <div class="py-12">
+        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-
-                @if ($errors->any())
-                    <div class="mb-4 text-red-600">
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-                <form method="POST" action="{{ route('posts.store') }}" enctype="multipart/form-data">
+                <form action="{{ route('posts.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
-
                     <div class="mb-4">
-                        <label class="block text-gray-700">Title</label>
-                        <input type="text" name="title" class="w-full border-gray-300 rounded-md" required>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-gray-700">Body</label>
-                        <textarea name="body" rows="5" class="w-full border-gray-300 rounded-md" required></textarea>
+                        <label for="title" class="block text-gray-700">Title</label>
+                        <input type="text" name="title" id="title"
+                            class="w-full border border-gray-300 rounded-md p-2" required>
                     </div>
 
                     <div class="mb-4">
-                        <label class="block text-gray-700">Image (optional)</label>
-                        <input type="file" name="image" accept="image/*" onchange="previewImage(event)" class="w-full border-gray-300 rounded-md">
-                        <img id="preview" src="#" alt="Preview" class="mt-3 rounded-md" style="max-width: 300px; display:none;">
+                        <label for="body" class="block text-gray-700">Body</label>
+                        <textarea name="body" id="body" rows="5"
+                            class="w-full border border-gray-300 rounded-md p-2" required></textarea>
                     </div>
 
-                    <div class="flex justify-end">
-                        <a href="{{ route('dashboard') }}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md mr-2">Cancel</a>
-                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Publish</button>
+                    <div class="mb-4">
+                        <label for="image" class="block text-gray-700">Image (optional)</label>
+                        <input type="file" name="image" id="image"
+                            class="w-full border border-gray-300 rounded-md p-2">
                     </div>
+
+                    <button type="submit"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                        Create Post
+                    </button>
                 </form>
-
             </div>
         </div>
     </div>
-
-    <script>
-        function previewImage(event) {
-            const file = event.target.files[0];
-            const preview = document.getElementById('preview');
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.style.display = 'none';
-            }
-        }
-    </script>
 </x-app-layout>
