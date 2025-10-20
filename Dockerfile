@@ -15,11 +15,14 @@ COPY . /var/www/html
 # Set working directory
 WORKDIR /var/www/html
 
-# Install Composer
+# Change Apache DocumentRoot to Laravel's /public folder
+RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf /etc/apache2/apache2.conf
+
+# Install Composer and dependencies
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 RUN composer install --no-dev --optimize-autoloader
 
-# Set folder permissions
+# Set correct permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Expose port 80
