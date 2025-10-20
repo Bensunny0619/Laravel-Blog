@@ -17,10 +17,18 @@ class PostController extends Controller
                   ->orWhere('body', 'like', "%{$search}%");
         }
 
-        // 📰 Paginate posts (20 per page)
+        // 🏷️ Filter by category (optional)
+        if ($category = $request->input('category')) {
+    $query->where(function ($q) use ($category) {
+        $q->where('title', 'like', "%{$category}%")
+          ->orWhere('body', 'like', "%{$category}%");
+    });
+}
+
+
         $posts = $query->latest()->paginate(20);
 
-        // ⭐ Popular posts (by likes)
+        // ⭐ Popular posts
         $popularPosts = Post::withCount('likes')
             ->orderBy('likes_count', 'desc')
             ->take(5)
@@ -32,7 +40,32 @@ class PostController extends Controller
             ->with('post', 'user')
             ->get();
 
-        return view('posts.index', compact('posts', 'popularPosts', 'recentComments'));
+        // 🏷️ Categories (based on topics used in factory)
+        $categories = [
+            'Technology', 'Travel', 'Health', 'Food', 'Lifestyle',
+            'Education', 'Science', 'Business', 'Art', 'Sports'
+        ];
+
+        // 🧑‍💻 Top Authors (based on number of posts)
+        $topAuthors = \App\Models\User::withCount('posts')
+            ->orderBy('posts_count', 'desc')
+            ->take(5)
+            ->get();
+
+        // 📅 Archive (month/year)
+        $archives = Post::selectRaw('YEAR(created_at) year, MONTH(created_at) month, COUNT(*) post_count')
+            ->groupBy('year', 'month')
+            ->orderByRaw('MIN(created_at) desc')
+            ->get();
+
+        return view('posts.index', compact(
+            'posts',
+            'popularPosts',
+            'recentComments',
+            'categories',
+            'topAuthors',
+            'archives'
+        ));
     }
 
     public function create()

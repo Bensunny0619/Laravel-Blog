@@ -22,8 +22,49 @@
         </div>
     </x-slot>
 
-    <div class="max-w-7xl mx-auto mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-        {{-- MAIN POSTS AREA --}}
+    <div class="max-w-7xl mx-auto mt-6 grid grid-cols-1 md:grid-cols-4 gap-6">
+
+        {{-- LEFT SIDEBAR --}}
+        <div class="space-y-6">
+            {{-- 🏷️ Categories --}}
+            <div class="bg-white p-4 rounded shadow">
+                <h4 class="font-semibold text-lg mb-3 border-b pb-2">Categories</h4>
+                @foreach($categories as $cat)
+                    <a href="{{ route('posts.index', ['category' => $cat]) }}"
+                       class="block text-blue-600 hover:underline mb-1">
+                        {{ $cat }}
+                    </a>
+                @endforeach
+            </div>
+
+            {{-- 🧑‍💻 Top Authors --}}
+            <div class="bg-white p-4 rounded shadow">
+                <h4 class="font-semibold text-lg mb-3 border-b pb-2">Top Authors</h4>
+                @foreach($topAuthors as $author)
+                    <div class="flex items-center gap-2 mb-2">
+                        <img src="{{ $author->profile_photo ?? 'https://ui-avatars.com/api/?name=' . urlencode($author->name) }}" 
+                             class="w-8 h-8 rounded-full">
+                        <div>
+                            <p class="font-medium text-gray-800">{{ $author->name }}</p>
+                            <p class="text-sm text-gray-500">{{ $author->posts_count }} posts</p>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            {{-- 📅 Archive --}}
+            <div class="bg-white p-4 rounded shadow">
+                <h4 class="font-semibold text-lg mb-3 border-b pb-2">Archive</h4>
+                @foreach($archives as $archive)
+                    <p class="text-gray-700 text-sm mb-1">
+                        {{ \Carbon\Carbon::create($archive->year, $archive->month)->format('F Y') }}
+                        ({{ $archive->post_count }})
+                    </p>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- MAIN CONTENT --}}
         <div class="md:col-span-2 bg-white p-6 rounded shadow">
             @foreach($posts as $post)
                 <div class="border-b border-gray-200 pb-4 mb-4">
@@ -50,35 +91,6 @@
 
                     <p class="mt-2 text-gray-800">{{ Str::limit($post->body, 150) }}</p>
 
-                    <div class="mt-3 flex items-center gap-4">
-                        {{-- Like Button --}}
-                        @auth
-                            <form action="{{ route('posts.like', $post) }}" method="POST" class="like-form" data-post-id="{{ $post->id }}">
-                                @csrf
-                                <button type="submit" class="flex items-center space-x-2">
-                                    @if ($post->likes->where('user_id', auth()->id())->count())
-                                        ❤️ <span>Unlike</span>
-                                    @else
-                                        🤍 <span>Like</span>
-                                    @endif
-                                </button>
-                            </form>
-                            <span class="text-gray-600 like-count-{{ $post->id }}">
-                                {{ $post->likes->count() }} {{ Str::plural('like', $post->likes->count()) }}
-                            </span>
-                        @else
-                            <a href="{{ route('login') }}" class="text-blue-600 hover:underline">Log in to like</a>
-                        @endauth
-
-                        {{-- Comment Button --}}
-                        <a href="{{ route('posts.show', $post) }}#comments" class="flex items-center space-x-2 text-blue-600 hover:underline">
-                            💬 <span>Comment</span>
-                        </a>
-                        <span class="text-gray-600">
-                            {{ $post->comments->count() }} {{ Str::plural('comment', $post->comments->count()) }}
-                        </span>
-                    </div>
-
                     @auth
                         @if($post->user_id === auth()->id())
                             <div class="mt-2">
@@ -97,7 +109,7 @@
             {{ $posts->links() }}
         </div>
 
-        {{-- SIDEBAR --}}
+        {{-- RIGHT SIDEBAR --}}
         <div class="space-y-6">
             {{-- ⭐ Popular Posts --}}
             <div class="bg-white p-4 rounded shadow">

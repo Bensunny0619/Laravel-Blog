@@ -28,6 +28,14 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+    public function posts()
+{
+    return $this->hasMany(\App\Models\Post::class);
+}
+public function comments()
+    {
+        return $this->hasMany(\App\Models\Comment::class);
+    }
     protected $hidden = [
         'password',
         'remember_token',
