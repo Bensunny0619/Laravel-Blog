@@ -7,10 +7,32 @@ use Illuminate\Http\Request;
 
 class PostController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $posts = Post::latest()->paginate(20);
-        return view('posts.index', compact('posts'));
+        $query = Post::query();
+
+        // 🔍 Search functionality
+        if ($search = $request->input('search')) {
+            $query->where('title', 'like', "%{$search}%")
+                  ->orWhere('body', 'like', "%{$search}%");
+        }
+
+        // 📰 Paginate posts (20 per page)
+        $posts = $query->latest()->paginate(20);
+
+        // ⭐ Popular posts (by likes)
+        $popularPosts = Post::withCount('likes')
+            ->orderBy('likes_count', 'desc')
+            ->take(5)
+            ->get();
+
+        // 💬 Recent comments
+        $recentComments = \App\Models\Comment::latest()
+            ->take(5)
+            ->with('post', 'user')
+            ->get();
+
+        return view('posts.index', compact('posts', 'popularPosts', 'recentComments'));
     }
 
     public function create()
