@@ -22,8 +22,11 @@ class LikeController extends Controller
 
         // 🔧 If it's an AJAX request (fetch), return JSON
         if (request()->ajax()) {
+            $count = $post->likes()->count();
+
             return response()->json([
-                'likes_count' => $post->likes()->count(),
+                'likes' => $count,          // used by your JS
+                'likes_count' => $count,    // keep for compatibility
                 'liked' => !$existingLike
             ]);
         }
